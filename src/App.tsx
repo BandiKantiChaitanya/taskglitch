@@ -19,8 +19,12 @@ import {
 } from '@/utils/logic';
 
 function AppContent() {
-  const { loading, error, metrics, derivedSorted, addTask, updateTask, deleteTask, undoDelete, lastDeleted } = useTasksContext();
-  const handleCloseUndo = () => {};
+  const { loading, error, metrics, derivedSorted, addTask, updateTask, deleteTask, undoDelete, lastDeleted,clearLastDeleted } = useTasksContext();
+  // Fixed bug: clear lastDeleted task when snackbar closes
+// Prevents restoring stale/old deleted tasks after snackbar timeout
+  const handleCloseUndo = () => {
+    clearLastDeleted()
+  };
   const [q, setQ] = useState('');
   const [fStatus, setFStatus] = useState<string>('All');
   const [fPriority, setFPriority] = useState<string>('All');

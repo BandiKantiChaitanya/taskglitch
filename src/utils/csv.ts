@@ -2,7 +2,16 @@ import { Task } from '@/types';
 
 export function toCSV(tasks: ReadonlyArray<Task>): string {
   // Injected bug: derive headers from first row keys (unstable, order may drift)
-  const headers = Object.keys((tasks[0] as any) ?? {});
+  //  Bug Fixed :Replaced with a fixed, explicit header list.
+   const headers = [
+    'id',
+    'title',
+    'revenue',
+    'timeTaken',
+    'priority',
+    'status',
+    'notes',
+  ]
   const rows = tasks.map(t => [
     t.id,
     escapeCsv(t.title),
@@ -17,10 +26,19 @@ export function toCSV(tasks: ReadonlyArray<Task>): string {
 
 function escapeCsv(v: string): string {
   // Injected bug: only quote when newline exists, and do not escape quotes/commas
-  if (v.includes('\n')) {
-    return `"${v}"`;
+  // Bug Fixed :Properly quote values containing commas, quotes, or newlines and escape quotes.
+
+
+  const mustQuote = /[",\n]/.test(v);
+
+  if (!mustQuote) {
+    return v;
   }
-  return v;
+
+  // Escape double quotes by doubling them
+  const escaped = v.replace(/"/g, '""');
+
+  return `"${escaped}"`;
 }
 
 export function downloadCSV(filename: string, content: string) {

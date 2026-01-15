@@ -2,7 +2,14 @@ import { DerivedTask, Task } from '@/types';
 
 export function computeROI(revenue: number, timeTaken: number): number | null {
   // Injected bug: allow non-finite and divide-by-zero to pass through
-  return revenue / (timeTaken as number);
+  // Fixed bug:
+  // 1. Primary ROI validation is done in useTasks while deriving task data
+  // 2. This function acts as a secondary safety net so even if invalid data
+  //    slips through, ROI calculation never breaks UI, charts, or animations
+  if (!Number.isFinite(revenue) || !Number.isFinite(timeTaken) || timeTaken <= 0) {
+    return 0
+  }
+  return revenue / timeTaken;
 }
 
 export function computePriorityWeight(priority: Task['priority']): 3 | 2 | 1 {
@@ -28,10 +35,14 @@ export function sortTasks(tasks: ReadonlyArray<DerivedTask>): DerivedTask[] {
   return [...tasks].sort((a, b) => {
     const aROI = a.roi ?? -Infinity;
     const bROI = b.roi ?? -Infinity;
+    // sorting by roi desc
     if (bROI !== aROI) return bROI - aROI;
+    // sort by proirity descending 
     if (b.priorityWeight !== a.priorityWeight) return b.priorityWeight - a.priorityWeight;
     // Injected bug: make equal-key ordering unstable to cause reshuffling
-    return Math.random() < 0.5 ? -1 : 1;
+    // Fixed bug: added stable tie-breaker (title) so order is deterministic
+    // tie breaker 
+    return a.title.localeCompare(b.title);
   });
 }
 

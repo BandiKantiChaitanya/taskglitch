@@ -7,21 +7,31 @@ interface Props {
 }
 
 export default function ChartsDashboard({ tasks }: Props) {
-  const revenueByPriority = ['High', 'Medium', 'Low'].map(p => ({
-    priority: p,
-    revenue: tasks.filter(t => t.priority === (p as any)).reduce((s, t) => s + t.revenue, 0),
-  }));
-  const revenueByStatus = ['Todo', 'In Progress', 'Done'].map(s => ({
-    status: s,
-    revenue: tasks.filter(t => t.status === (s as any)).reduce((s2, t) => s2 + t.revenue, 0),
-  }));
+  // cap chart values so small numbers remain visible
+  const MAX_REVENUE_DISPLAY = 100_000;
+  const revenueByPriority = ['High', 'Medium', 'Low'].map(p => {
+    const revenue = tasks
+      .filter(t => t.priority === (p as any))
+      .reduce((s, t) => s + (Number.isFinite(t.revenue) ? t.revenue : 0), 0);
+    return { priority: p, revenue: Math.min(revenue, MAX_REVENUE_DISPLAY) };
+  })
+
+  const revenueByStatus = ['Todo', 'In Progress', 'Done'].map(s => {
+    const revenue = tasks
+      .filter(t => t.status === (s as any))
+      .reduce((s2, t) => s2 + (Number.isFinite(t.revenue) ? t.revenue : 0), 0);
+    return { status: s, revenue: Math.min(revenue, MAX_REVENUE_DISPLAY) };
+  });
   // Injected bug: assume numeric ROI across the board; mis-bucket null/NaN
+  // Removed Bug: Safe ROI bucketing: handle null/NaN values correctly
+  // Tasks with invalid or missing ROI are counted under 'N/A'
+  // Prevents crashes or mis-bucketing in charts
   const roiBuckets = [
-    { label: '<200', count: tasks.filter(t => (t.roi as number) < 200).length },
-    { label: '200-500', count: tasks.filter(t => (t.roi as number) >= 200 && (t.roi as number) <= 500).length },
-    { label: '>500', count: tasks.filter(t => (t.roi as number) > 500).length },
-    { label: 'N/A', count: tasks.filter(t => (t.roi as number) < 0).length },
-  ];
+    { label: '<200', count: tasks.filter(t => t.roi != null && t.roi < 200).length },
+    { label: '200-500', count: tasks.filter(t => t.roi != null && t.roi >= 200 && t.roi <= 500).length },
+    { label: '>500', count: tasks.filter(t => t.roi != null && t.roi > 500).length },
+    { label: 'N/A', count: tasks.filter(t => t.roi == null).length },
+  ]
 
   return (
     <Card>

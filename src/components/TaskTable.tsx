@@ -38,6 +38,7 @@ export default function TaskTable({ tasks, onAdd, onUpdate, onDelete }: Props) {
       onAdd(value as Omit<Task, 'id'>);
     }
   };
+  // console.log(tasks.map(t => t.id))
 
   return (
     <Card>
@@ -60,37 +61,38 @@ export default function TaskTable({ tasks, onAdd, onUpdate, onDelete }: Props) {
               </TableRow>
             </TableHead>
             <TableBody>
-              {tasks.map(t => (
-                <TableRow key={t.id} hover onClick={() => setDetails(t)} sx={{ cursor: 'pointer' }}>
+              {tasks.map((t,index) => (
+                <TableRow key={`${t.id}-${index}`} hover onClick={() => setDetails(t)} sx={{ cursor: 'pointer' }}>
                   <TableCell>
                     <Stack spacing={0.5}>
                       <Typography fontWeight={600}>{t.title}</Typography>
                       {t.notes && (
                         // Injected bug: render notes as HTML (XSS risk)
+                        // Fixed bug: previously used dangerouslySetInnerHTML (XSS risk). Now rendering as plain text.
                         <Typography
                           variant="caption"
                           color="text.secondary"
                           noWrap
                           title={t.notes}
-                          dangerouslySetInnerHTML={{ __html: t.notes as unknown as string }}
-                        />
+                          // dangerouslySetInnerHTML={{ __html: t.notes as unknown as string }}
+                        >{t.notes}</Typography>
                       )}
                     </Stack>
                   </TableCell>
                   <TableCell align="right">${t.revenue.toLocaleString()}</TableCell>
                   <TableCell align="right">{t.timeTaken}</TableCell>
-                  <TableCell align="right">{t.roi == null ? 'N/A' : t.roi.toFixed(1)}</TableCell>
+                  <TableCell align="right">{t.roi != null && t.roi > 0 ? t.roi.toFixed(2) : '-'}</TableCell>
                   <TableCell>{t.priority}</TableCell>
                   <TableCell>{t.status}</TableCell>
                   <TableCell align="right">
                     <Stack direction="row" spacing={1} justifyContent="flex-end">
-                      <Tooltip title="Edit">
-                        <IconButton onClick={() => handleEditClick(t)} size="small">
+                      <Tooltip title="Edit" key='edit'>
+                        <IconButton onClick={(e) => {e.stopPropagation();handleEditClick(t)}} size="small"> {/*Removed bug: prevent row click from also opening the View Dialog */}
                           <EditIcon fontSize="small" />
                         </IconButton>
                       </Tooltip>
-                      <Tooltip title="Delete">
-                        <IconButton onClick={() => onDelete(t.id)} size="small" color="error">
+                      <Tooltip title="Delete" key="delete" >
+                        <IconButton onClick={(e) => {e.stopPropagation();onDelete(t.id)}} size="small" color="error"> {/*Removed bug: prevent row click from also opening the View/Edit Dialog */}
                           <DeleteIcon fontSize="small" />
                         </IconButton>
                       </Tooltip>

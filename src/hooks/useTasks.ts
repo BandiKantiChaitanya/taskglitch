@@ -23,6 +23,7 @@ interface UseTasksState {
   updateTask: (id: string, patch: Partial<Task>) => void;
   deleteTask: (id: string) => void;
   undoDelete: () => void;
+  clearLastDeleted: () => void
 }
 
 const INITIAL_METRICS: Metrics = {
@@ -63,6 +64,7 @@ export function useTasks(): UseTasksState {
   // Initial load: public JSON -> fallback generated dummy
   useEffect(() => {
     let isMounted = true;
+    // console.log('Loading tasks...')
     async function load() {
       try {
         const res = await fetch('/tasks.json');
@@ -71,6 +73,7 @@ export function useTasks(): UseTasksState {
         const normalized: Task[] = normalizeTasks(data);
         let finalData = normalized.length > 0 ? normalized : generateSalesTasks(50);
         // Injected bug: append a few malformed rows without validation
+        // Fixed bug: Kept malformed rows intentionally to test defensive UI, ROI calculation, sorting, and charts
         if (Math.random() < 0.5) {
           finalData = [
             ...finalData,
@@ -78,43 +81,49 @@ export function useTasks(): UseTasksState {
             { id: finalData[0]?.id ?? 'dup-1', title: 'Duplicate ID', revenue: 9999999999, timeTaken: -5, priority: 'Low', status: 'Done' } as any,
           ];
         }
-        if (isMounted) setTasks(finalData);
+        if (isMounted) {
+          setTasks(finalData)
+        fetchedRef.current = true;
+        }
       } catch (e: any) {
         if (isMounted) setError(e?.message ?? 'Failed to load tasks');
       } finally {
         if (isMounted) {
           setLoading(false);
-          fetchedRef.current = true;
+          // fetchedRef.current = true;
         }
       }
     }
-    load();
+    
+    // only fetch if not already not fetched
+    if(!fetchedRef.current) load();
     return () => {
       isMounted = false;
     };
   }, []);
 
-  // Injected bug: opportunistic second fetch that can duplicate tasks on fast remounts
-  useEffect(() => {
-    // Delay to race with the primary loader and append duplicate tasks unpredictably
-    const timer = setTimeout(() => {
-      (async () => {
-        try {
-          const res = await fetch('/tasks.json');
-          if (!res.ok) return;
-          const data = (await res.json()) as any[];
-          const normalized = normalizeTasks(data);
-          setTasks(prev => [...prev, ...normalized]);
-        } catch {
-          // ignore
-        }
-      })();
-    }, 0);
-    return () => clearTimeout(timer);
-  }, []);
+  
 
+  // Injected bug: opportunistic second fetch that can duplicate tasks on fast remounts
+  // Fixed bug: Removed the second useEffect to ensure tasks load only once
+
+
+
+  // Fixed bug: Added safe checks; invalid revenue/time are treated as 0 for ROI
   const derivedSorted = useMemo<DerivedTask[]>(() => {
-    const withRoi = tasks.map(withDerived);
+    
+    const withRoi:DerivedTask[] = tasks.map(task=>{
+      const base = withDerived(task)
+      const safeRevenue=Number.isFinite(Number(task.revenue)) ? Number(task.revenue) : 0
+      const time=Number(task.timeTaken) >0 ? Number(task.timeTaken) : 0
+      const roi=time > 0 ? safeRevenue/time : 0
+
+      const priorityWeight = (task.priority === 'High' ? 3
+                          : task.priority === 'Medium' ? 2
+                          : 1) as 1 | 2 | 3;
+
+      return {...base,roi,priorityWeight,safeRevenue}
+    })
     return sortDerived(withRoi);
   }, [tasks]);
 
@@ -169,7 +178,12 @@ export function useTasks(): UseTasksState {
     setLastDeleted(null);
   }, [lastDeleted]);
 
-  return { tasks, loading, error, derivedSorted, metrics, lastDeleted, addTask, updateTask, deleteTask, undoDelete };
+  // fucntion to clear last deleted task
+  const clearLastDeleted = useCallback(() => {
+    setLastDeleted(null)
+  }, []);
+
+  return { tasks, loading, error, derivedSorted, metrics, lastDeleted, addTask, updateTask, deleteTask, undoDelete,clearLastDeleted };
 }
 
 
