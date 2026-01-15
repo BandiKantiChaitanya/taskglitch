@@ -140,7 +140,7 @@ The screenshot below demonstrates capped revenue values while preserving accurat
 ![Undo Snackbar](./screenshots/delete-snackbar.png)
 
 ### Stable Sorting with Same ROI
-![Sorting Stability](./screenshots/sorting-stability.png)
+![Sorting Stability](./screenshots/stable-sorting.png)
 
 ---
 
