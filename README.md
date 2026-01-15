@@ -8,7 +8,7 @@ This repository contains bug fixes and stability improvements completed as part 
 ## 🚀 Live Application
 
 🔗 Live URL:  
-https://task-glitch.vercel.app
+https://chaitanya-taskglitch.vercel.app/
 
 > Note: The application uses LocalStorage for data persistence. No backend is involved.
 
